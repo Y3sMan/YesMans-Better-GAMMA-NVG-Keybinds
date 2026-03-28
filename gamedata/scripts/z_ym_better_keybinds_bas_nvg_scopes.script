@@ -1,0 +1,14 @@
+
+--------------------------------------------
+-- bas_nvg_scopes.script Patch
+--------------------------------------------
+local _patches = aaa__ym_gamma_better_nvg_keybinds.patches
+function aaa__ym_gamma_better_nvg_keybinds.patches()
+    -- run all other patches
+    _patches()
+
+    if bas_nvg_scopes then
+        UnregisterScriptCallback("on_key_release", bas_nvg_scopes.on_key_release)
+        UnregisterScriptCallback("on_key_press", bas_nvg_scopes.switching_sight)
+    end
+end

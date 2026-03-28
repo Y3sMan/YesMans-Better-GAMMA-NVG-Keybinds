@@ -689,46 +689,11 @@ end
 --- Patches other scripts to unregister their key events
 function patches()
 
-    -- ----------- item_device.script ------------
-    if item_device then
-        UnregisterScriptCallback("on_key_hold", item_device.on_key_hold)
-        UnregisterScriptCallback("on_key_press", item_device.on_key_press)
-        UnregisterScriptCallback("on_key_release", item_device.on_key_release)
-    end
-
     --  ---- bas_nvg_scopes.script ---------
     if bas_nvg_scopes then
         UnregisterScriptCallback("on_key_release", bas_nvg_scopes.on_key_release)
         UnregisterScriptCallback("on_key_press", bas_nvg_scopes.switching_sight)
     end
-
-
-    --  ---- z_mark_switch.script ---------
-    if z_mark_switch then
-
-        UnregisterScriptCallback("on_key_release", z_mark_switch.on_key_release)
-
-        -- override mark_switch mcm 
-        -- just show a message that explains where their mark switch key went
-        z_mark_switch.on_mcm_load = function()
-            op = {
-                id = "mark_switch",
-                sh = true,
-                gr = {
-                    { id = "title",   type = "slide",    link = "ui_options_slider_player", text = "ui_mcm_mark_switch_title", size = { 512, 50 }, spacing = 20 },
-                    {
-                        id = "desc",
-                        type = "desc",
-                        text = "Mark Switch key has been moved to your %c[255,0,255,0]Night Vision%c[255, 255,255 ,255] key.\nAdditionally, Alt + %c[255,0,255,0]Night Vision%c[255, 255,255 ,255] key works.",
-                        clr = {255, 255,255 ,255},
-                    }
-                }
-            }
-        end
-    end
-
-
-
 end
 
 

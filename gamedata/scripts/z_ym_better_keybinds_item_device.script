@@ -1,0 +1,13 @@
+
+--------------------------------------------
+-- item_device.script Patch
+--------------------------------------------
+local _patches = aaa__ym_gamma_better_nvg_keybinds.patches
+function aaa__ym_gamma_better_nvg_keybinds.patches()
+    _patches()
+    if item_device then
+        UnregisterScriptCallback("on_key_hold", item_device.on_key_hold)
+        UnregisterScriptCallback("on_key_press", item_device.on_key_press)
+        UnregisterScriptCallback("on_key_release", item_device.on_key_release)
+    end
+end
