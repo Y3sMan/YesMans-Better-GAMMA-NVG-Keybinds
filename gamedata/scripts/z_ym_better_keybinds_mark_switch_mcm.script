@@ -205,7 +205,6 @@ end
 -- z_mark_switch.script Patch
 --------------------------------------------
 -- override mark_switch mcm 
--- just show a message that explains where their mark switch key went
 local _patches = aaa__ym_gamma_better_nvg_keybinds.patches
 function aaa__ym_gamma_better_nvg_keybinds.patches()
     _patches()
@@ -225,20 +224,19 @@ function aaa__ym_gamma_better_nvg_keybinds.patches()
                     {
                         id = "desc",
                         type = "desc",
-                        text = "Mark Switch key has been moved to your %c[255,0,255,0]Night Vision%c[255, 255,255 ,255] key.\nAdditionally, Alt + %c[255,0,255,0]Night Vision%c[255, 255,255 ,255] key works.",
+                        text = "Mark Switch key has been moved to your %c[255,0,255,0]Night Vision%c[255, 255,255 ,255] key.\n\n Additionally, Alt + %c[255,0,255,0]Night Vision%c[255, 255,255 ,255] key works.",
+                        clr = {255, 255,255 ,255},
+                    },
+                    {
+                        id = "desc_more",
+                        type = "desc",
+                        text = "If you would like to revert this behavior, uninstall YesMans Better GAMMA NVG and MarkSwitch Keybinds",
                         clr = {255, 255,255 ,255},
                     }
                 }
             }
+            return op
         end
+
     end
-end
-
-
-function on_first_update()
-    overrides()
-end
-
-function on_game_start()
-    RegisterScriptCallback("actor_on_first_update", on_first_update)
 end
