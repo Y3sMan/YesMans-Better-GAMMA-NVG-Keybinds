@@ -8,7 +8,7 @@
 
 --#region DEBUG ----------------------------------------
 local modname = "YM GAMMA Contextual Keys"
-local DEBUG = true
+local DEBUG = false
 
 local function print_table (tbl, indent)
     local g_type = type
@@ -373,7 +373,7 @@ function dosimeter_key_release()
         item_device.holding_shift = false
     end
 
-    debug("dosimeter key = %s", key)
+    -- debug("dosimeter key = %s", key)
     _item_device_key_release(key)
 end
 ----------------------------------------
@@ -393,7 +393,7 @@ end
 --   -----   on_key_release functions-----
 function bas_nvg_toggle()
     local toggle_key = other_mod_keys.bas_nvg_scopes.nvg.key
-    debug("toggle key = %s", toggle_key)
+    -- debug("toggle key = %s", toggle_key)
     _bas_nvg_scopes_key_release(toggle_key)
 end
 
@@ -426,7 +426,7 @@ function is_mark_nvg(wpn)
         with ms_count = 2, it is toggleable
     --]]
 
-    debug("current marks:")
+    -- debug("current marks:")
     print_table(z_mark_switch.current_marks)
 
     
@@ -434,13 +434,13 @@ function is_mark_nvg(wpn)
     local attached_scope = utils_item.get_attached_scope(wpn, false)
     -- check if wpn has a scope, or wpn is actually the binoculars
     if not attached_scope and not string_find(wpn:section(), "wpn_binoc") then return end
-    debug("scope = %s", attached_scope)
+    -- debug("scope = %s", attached_scope)
 
     local ms_nvg = false
      
     -- start parsing z_mark_switch information
     local info = parse_parameters(wpn)
-    debug("ms info:")
+    -- debug("ms info:")
     print_table(info)
 
     -- how many mark switches the scope has
@@ -463,7 +463,7 @@ function is_mark_nvg(wpn)
         --]]
         local image_type = attached_scope and utils_item.get_param(attached_scope, nil, "s3ds_image_type", "string") or 0
         image_type = tonumber(image_type) or 0
-        debug("image type = %s, ms_count = %s", image_type, ms_count)
+        -- debug("image type = %s, ms_count = %s", image_type, ms_count)
 
         -- if scope is an nvg (or thermal) scope AND we can switch nvgs off
         if (ms_count > 1) and (image_type >= 1) and nv_state then
@@ -480,7 +480,7 @@ function deactivate_mark_nvg(wpn)
     if not wpn then return end
 
     local info = parse_parameters(wpn)
-    debug("ms info:")
+    -- debug("ms info:")
     print_table(info)
 
     local new_info = info
@@ -554,12 +554,12 @@ end
 --]]
 function on_key_release(key)
     local bind = dik_to_bind(key)
-	debug("release event")
+	-- debug("release event")
     if (bind == key_bindings.kNIGHT_VISION) then
         nods_keypress_release() -- item_device
 
         nv_state = item_device.nv_state
-        debug("nv_state = %s", nv_state)
+        -- debug("nv_state = %s", nv_state)
         if nv_state then
             if ui_mcm[MARK_SWITCH_MODIFIER_MODE] then
                 mark_switch_release()
@@ -567,7 +567,7 @@ function on_key_release(key)
                 adjust_nods_brightness_key_release() --item_device
             end
         elseif is_weapon_zoomed() then
-            debug("bino nvg toggle")
+            -- debug("bino nvg toggle")
             bas_nvg_toggle() -- bas_nvg_scopes
             mark_switch_release() -- mark_switch 
         end
@@ -584,7 +584,7 @@ end
         - switching_sight (remove nvg)
 --]]
 function on_key_press(key)
-    debug("press event")
+    -- debug("press event")
     -- if (key == DIK_keys.DIK_N) then
     -- end
     _item_device_key_press(key)
@@ -599,8 +599,8 @@ function on_zoom_in(obj)
 
     nv_state = item_device.nv_state
     local bas_toggle = bas_nvg_scopes.toggle
-    debug("nv_state = %s", nv_state)
-    debug("bas_nvg = %s", bas_toggle)
+    -- debug("nv_state = %s", nv_state)
+    -- debug("bas_nvg = %s", bas_toggle)
 
 	local wpn = db.actor:active_item()
     if not wpn then return end
@@ -689,11 +689,6 @@ end
 --- Patches other scripts to unregister their key events
 function patches()
 
-    --  ---- bas_nvg_scopes.script ---------
-    if bas_nvg_scopes then
-        UnregisterScriptCallback("on_key_release", bas_nvg_scopes.on_key_release)
-        UnregisterScriptCallback("on_key_press", bas_nvg_scopes.switching_sight)
-    end
 end
 
 
