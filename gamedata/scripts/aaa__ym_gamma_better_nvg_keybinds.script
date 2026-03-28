@@ -1,0 +1,763 @@
+--[[
+    Mod Name: Better GAMMA NVG and MarkSwitch Keybinds (pending)
+    Author:	YesMan
+    Created:	27-03-2026 (dd-mm-yyyy)
+    Last Edit:	27-03-2026 (dd-mm-yyyy)
+    Version:	v1.0
+]]
+
+--#region DEBUG ----------------------------------------
+local modname = "YM GAMMA Contextual Keys"
+local DEBUG = true
+
+local function print_table (tbl, indent)
+    local g_type = type
+    if not indent then
+        indent = 0
+    end
+
+    utils_data.debug_write(string.rep(" ", indent) .. "{")
+
+    indent = indent + 2
+
+    if (g_type(tbl) == "userdata") then        
+        utils_data.debug_write("<userdata>,\n")
+    else
+        for k, v in pairs(tbl) do
+            local toprint = string.rep(" ", indent)
+
+            if (g_type(k) == "number") then
+                toprint = toprint .. "[" .. k .. "] = "
+            elseif (g_type(k) == "string") then
+                toprint = toprint  .. k ..  " = "
+            end
+
+            if (g_type(v) == "number") then
+                utils_data.debug_write(toprint .. v .. ",")
+            elseif (g_type(v) == "string") then
+                utils_data.debug_write(toprint .. "\"" .. v .. "\",")
+            elseif (g_type(v) == "table") then
+                utils_data.debug_write(toprint)
+                print_table(v, indent + 2)
+            else
+                utils_data.debug_write(toprint .. "\"" .. tostring(v) .. "\",")
+            end
+        end
+    end
+
+    utils_data.debug_write(string.rep(" ", indent-2) .. "}")
+end	
+
+
+--- Flattens a table of any nested status into a single string
+---@param o table
+---@return string 
+local function dump_table(o)
+   if type(o) == 'table' then
+      local s = '{ '
+      for k,v in pairs(o) do
+         if type(k) ~= 'number' then k = '"'..k..'"' end
+         s = s .. '['..k..'] = ' .. dump_table(v) .. ','
+      end
+      return s .. '} '
+   else
+      return tostring(o)
+   end
+end
+
+
+local function log(log_type, output, ...)
+    if not output then
+        utils_data.debug_write("[" .. modname .. "] "..log_type..": ".."(nil)")
+        callstack()
+    elseif (type(output) == "table") then
+        utils_data.debug_write("[" .. modname .. "] "..log_type..": ")
+        debug_print_table(output)
+    else
+        -- pulled from _g.script
+        -- more var subbing
+        if (select('#', ...) >= 1) then
+            local i = 0
+            local p = { ... }
+            local function sr(a)
+                i = i + 1
+                if (type(p[i]) == 'userdata') then
+                    if (p[i].x and p[i].y) then
+                        return vec_to_str(p[i])
+                    end
+                    return 'userdata'
+                end
+                return tostring(p[i])
+            end
+            output = string.gsub(output, "%%s", sr)
+        end
+        printf("[" .. modname .. "] " .. log_type .. ": " .. output, ...)
+    end
+end
+
+function debug(output,...)
+    if not DEBUG then return end
+    log("DEBUG", output, ...)
+end
+
+function info(output,...)
+    log("INFO ", output, ...)
+end
+
+function warn(output,...)
+    log("WARN ", output, ...)
+end
+
+function error(output,...)
+    log("ERROR", output, ...)
+end
+
+function debug_tip(text, delay,...)
+    debug(text, ...)
+
+    local text = "[" .. modname .. "] "..tostring(text)
+
+    if not db.actor then
+        return
+    end
+    
+    local ico = "ui_inGame2_Dengi_otdani"
+    local text_color = utils_xml.get_color("pda_white")
+
+    text = text_color .. text
+
+    if delay == nil then
+        delay = 6000
+    end
+
+    news_manager.send_tip(db.actor, text, nil, ico, delay)
+end
+
+local function debug_print_table(caption, tbl_options)
+    if not DEBUG then return end
+
+    if not tbl_options then 
+        info("debug_print_table: tbl_options is nil")
+        return 
+    end
+
+    local tbl = {}
+    if type(tbl_options[1]) ~="table" then
+        tbl = tbl_options
+    else
+        tbl = tbl_options[1]
+    end
+
+    local indent = tbl_options[2] or 0
+
+    debug(caption)
+    print_table(tbl, indent)
+end
+
+local function info_print_table(caption, tbl_options)
+    if not DEBUG then return end
+    if not tbl_options then 
+        info("info_print_table: tbl_options is nil")
+        return 
+    end
+
+    local tbl = {}
+
+    if type(tbl_options[1]) ~="table" then
+        tbl = tbl_options
+    else
+        tbl = tbl_options[1]
+    end
+
+    local indent = tbl_options[2] or 0
+
+    info(caption)
+    print_table(tbl, indent)
+end
+
+
+
+function open_specific_mcm(path)
+    if not DEBUG then return end
+
+    if ui_mcm then
+        exec_console_cmd("main_menu")
+
+        local function open_mcm_event(path)
+            ui_mcm.open_to(path)
+            return true
+        end
+
+
+        if demonized_time_events then
+            demonized_time_events.CreateTimeEvent("ym_open_mcm", "open_mcm",1, open_mcm_event, path)
+        else
+            CreateTimeEvent("ym_open_mcm", "open_mcm",1, open_mcm_event, path)
+        end
+    end
+end
+
+--#endregion------------------------------------------------------------------
+--#region MCM Defaults 
+
+
+
+-- imports
+local string_find = string.find
+
+-- item_device
+local nv_state = item_device.nv_state
+local _item_device_key_hold = item_device.on_key_hold
+local _item_device_key_press = item_device.on_key_press
+local _item_device_key_release = item_device.on_key_release
+-- bas_nvg_scopes
+local bas_switch = bas_nvg_scopes.switch
+local _bas_nvg_scopes_key_press = bas_nvg_scopes.switching_sight
+local _bas_nvg_scopes_key_release = bas_nvg_scopes.on_key_release
+
+-- z_mark_switch
+local _mark_switch_key_release = z_mark_switch.on_key_release
+local parse_parameters = z_mark_switch.parse_parameters
+local update_shader = z_mark_switch.update_shader
+
+
+--[[
+defaults = {
+	... = {
+		["key"] = key, duh,
+		["mode"] = 0, 1, 2, (press, double-tap, hold),
+		["mod"] = 0, 1, 2, 3 (none, shift, ctrl, alt)
+	}
+
+}
+o
+
+--]]
+-- Defaults
+defaults = {
+    ["scope_bino_nvg_key"] = {
+        ["key"] = DIK_keys.DIK_M,
+        ["mode"] = 0,
+        ["mod"] = 0
+    }
+}
+ym_better_keys = {
+    ["z_mark_switch"] = {
+        ["mark_switch"] = {
+            ["bind"] = key_bindings.kNIGHT_VISION,
+            ["mode"] = ui_mcm.MOD_ALT
+        }
+    }
+}
+
+MARK_SWITCH_MODIFIER_MODE = "MOD_ALT"
+
+-- keys and binds other mods use
+-- take their keybinds and map them to whatever keybind we want
+local other_mod_keys = {
+    ["bas_nvg_scopes"] = {
+        ["nvg"] = {
+            ["key"] = bas_nvg_scopes.switch or DIK_keys.DIK_M
+        },
+        ["switching_sight"] = {
+            ["bind"] = key_bindings.kWPN_FUNC
+        }
+    },
+    ["z_mark_switch"] = {
+        ["mark_switch"] = {
+            ["key"] =  DIK_keys.DIK_EQUALS,
+        }
+    },
+    ["item_device"] = {
+        ["nvg"] = {
+            ["bind"] = key_bindings.kNIGHT_VISION
+        },
+        ["dosimeter"] = {
+            ["bind"] = key_bindings.kCUSTOM14
+        }
+    }
+}
+
+local key_to_key_mappings = {
+    ["kNIGHT_VISION"] = {
+        ["bas_nvg_scopes"] = DIK_keys.DIK_M,
+        ["item_device"] = key_bindings.kNIGHT_VISION
+    }
+}
+
+local mcm_keybinds = ui_mcm and ui_mcm.key_hold
+-- mod id name 
+local mod_id = "ym_gamma_better_keybinds"
+local ui_mcm_mod_id = "ui_mcm_" .. mod_id .. "_"
+--#endregion
+
+--#region utilities
+
+--#region helpers
+function is_bino_upgraded()
+    local is_upgraded = false
+    local weapon = db.actor:active_item()
+
+    -- player has bino check
+    if not weapon or not string_find(weapon:section(),"wpn_binoc") then return is_upgraded end
+
+    local wpn_sec = weapon:section()
+    if utils_item.has_this_upgrade(weapon, wpn_sec, "up_secone_binoc") or
+        utils_item.has_this_upgrade(weapon, wpn_sec, "up_seconc_binoc") or
+        utils_item.has_this_upgrade(weapon, wpn_sec, "up_secona_binoc") then
+        is_upgraded = true
+    end
+
+    return is_upgraded
+end
+
+function is_weapon_zoomed()
+	local weapon_zoomed = axr_main.weapon_is_zoomed and (not (IsPistol(db.actor:active_item(),nil)) or db.actor:active_detector())
+    return weapon_zoomed or false
+end
+
+-- Control NVG state of bas_nvg_scopes
+--- @param on_off boolean 
+---| 'true' toggles on only
+---| 'false' toggles off only
+---| 'nil' toggles back and forth
+---@return nil
+function toggle_scope_nvg(on_off)
+    -- either set bas_bino nvg state
+    -- or simply toggle it, if on_off = nil
+    local toggle = bas_nvg_scopes.toggle
+    if on_off ~= nil then
+        bas_nvg_scopes.toggle = on_off
+    else
+        bas_nvg_scopes.toggle = not toggle
+    end 
+
+    toggle = bas_nvg_scopes.toggle
+    if on_off or toggle then
+        bas_nvg_scopes.activate()
+    else
+        bas_nvg_scopes.deactivate()
+    end
+end
+--#endregion
+
+--#region ====== item_device.script ======
+
+--  ----------    on_key_release functions -------
+
+---Adjust Beef's NVG Brightness
+function adjust_nods_brightness_key_release()
+    -- reset bas bino and scope nvg status
+    toggle_scope_nvg(false)
+
+
+    local nvg_bind = other_mod_keys.item_device.nvg.bind
+    local key = bind_to_dik(nvg_bind)
+    _item_device_key_release(key)
+end
+
+---Reset Beef's NVG Time Event that toggles nods on/off
+function nods_keypress_release()
+    RemoveTimeEvent("nvg_keypress", "nvg_keypress_long")
+end
+
+---Dosimeter Hotkey
+function dosimeter_key_release()
+    local dosimeter_bind = other_mod_keys.item_device.dosimeter.bind
+    local key = bind_to_dik(dosimeter_bind)
+
+    -- for some reason holding_shift gets stuck somewhere between this mod's
+    -- on_key_release and the execution of this function
+    -- we have to reset holding_shift ourselves
+    if not ui_mcm.MOD_SHIFT then
+        item_device.holding_shift = false
+    end
+
+    debug("dosimeter key = %s", key)
+    _item_device_key_release(key)
+end
+----------------------------------------
+-- -----     on_key_press functions ----------- 
+
+
+---Toggle Beef's NVGs on/off
+function toggle_nods_key_press()
+    local nods_bind = other_mod_keys.item_device.nvg.bind
+    local key = bind_to_dik(nods_bind)
+    _item_device_key_press(key)
+end
+----------------------------------------
+--#endregion ==============================================================
+
+--#region ====== bas_nvg_scopes.script ======
+--   -----   on_key_release functions-----
+function bas_nvg_toggle()
+    local toggle_key = other_mod_keys.bas_nvg_scopes.nvg.key
+    debug("toggle key = %s", toggle_key)
+    _bas_nvg_scopes_key_release(toggle_key)
+end
+
+----------------------------------------
+
+--   -----  on_key_press function   ------ 
+function bas_switch_sight()
+    local sight_key = bind_to_dik(other_mod_keys.bas_nvg_scopes.switching_sight.bind)
+    _bas_nvg_scopes_key_press(sight_key)
+end
+
+----------------------------------------
+--#endregion ==============================================================
+
+--#region ======= z_mark_switch.script             =======================================================
+-----------     on_key_release -----------------------------
+
+
+function mark_switch_release()
+    local key = other_mod_keys.z_mark_switch.mark_switch.key
+    _mark_switch_key_release(key)
+end
+
+function is_mark_nvg(wpn)
+    if not wpn then return end
+
+    --[[
+        we need to grab the s3ds_image_type from the scope config 
+        s3ds_image_type = 1 is an nvg scope
+        with ms_count = 2, it is toggleable
+    --]]
+
+    debug("current marks:")
+    print_table(z_mark_switch.current_marks)
+
+    
+    -- get the scope attached to the parameter gun wpn
+    local attached_scope = utils_item.get_attached_scope(wpn, false)
+    -- check if wpn has a scope, or wpn is actually the binoculars
+    if not attached_scope and not string_find(wpn:section(), "wpn_binoc") then return end
+    debug("scope = %s", attached_scope)
+
+    local ms_nvg = false
+     
+    -- start parsing z_mark_switch information
+    local info = parse_parameters(wpn)
+    debug("ms info:")
+    print_table(info)
+
+    -- how many mark switches the scope has
+    -- if we have an nvg scope, and ms_count = 2, then nvg state can be toggled off
+    local ms_count = info.ms_count or -1
+
+    -- check if scope is legit
+    -- binocs get up to this point, but attached_scope still = false
+    if attached_scope then
+        -- image_type is what actually defines if its an nvg scope or not
+        --[[
+            from mod_system_3dss_gamma_scopes.ltx:
+            ```
+                ; s3ds_image_type - background image processor (default 0)
+                ;   0 - none
+                ;   1 - NV scope (with ms_count = 2 becomes switchable)
+                ;   2 - thermal scope (with ms_count = 2 becomes switchable white-hot/black-hot, with ms_count = 3 becomes also switchable on/off)
+                ;   3 - Colored thermal scope (same as previous)
+            ```
+        --]]
+        local image_type = attached_scope and utils_item.get_param(attached_scope, nil, "s3ds_image_type", "string") or 0
+        image_type = tonumber(image_type) or 0
+        debug("image type = %s, ms_count = %s", image_type, ms_count)
+
+        -- if scope is an nvg (or thermal) scope AND we can switch nvgs off
+        if (ms_count > 1) and (image_type >= 1) and nv_state then
+            ms_nvg = true
+        end
+    end
+
+    return ms_nvg
+end
+
+---Deactivate mark_switch nvg scopes
+---does not touch any other scopes
+function deactivate_mark_nvg(wpn)
+    if not wpn then return end
+
+    local info = parse_parameters(wpn)
+    debug("ms info:")
+    print_table(info)
+
+    local new_info = info
+    new_info.ms_current = 1
+    z_mark_switch.current_marks[wpn:id()] = 1
+    update_shader(nil, new_info)
+end
+
+
+----------------------------------------
+
+
+--#endregion ==============================================================
+
+
+--#endregion
+
+
+--#region MCM Option Getters
+
+local function get_config(key, default_when_nil)
+    local opt = ui_mcm and ui_mcm.get(mod_id .. "/"..key)
+    if opt == nil then
+        opt = default_when_nil
+    end
+    return opt
+end
+
+function get_scopes_and_nvg_key()
+	--[[
+		returns a table containing:
+			keybind,
+			mode,
+			modifier (mod)
+	--]]
+	local key_info = {
+		["key"] = nil,
+		["mod"] = nil,
+		["mode"] = nil
+	}
+	key_info.key = get_config("scopes_and_nvg/keybind", defaults.scope_bino_nvg_key.key)
+	key_info.mode = get_config("scopes_and_nvg/mode", defaults.scope_bino_nvg_key.mode)
+	key_info.mod = get_config("scopes_and_nvg/modifier", defaults.scope_bino_nvg_key.mod)
+
+	return key_info
+end
+
+--#endregion
+
+--#region Main
+
+
+--[[
+    item_device.script:
+        - holding_shift check
+--]]
+function on_key_hold(key)
+	-- throttle(debug("other hold keys"), 1000)
+    _item_device_key_hold(key)
+end
+
+
+--[[
+    item_device.script:
+        - night vision brightness adjust
+        - dosimeter hotkey
+    bas_nvg_scopes.script:
+        - nvg toggle
+    z_mark_switch.script:
+        - scope marker switch (and nvg scope toggle)
+--]]
+function on_key_release(key)
+    local bind = dik_to_bind(key)
+	debug("release event")
+    if (bind == key_bindings.kNIGHT_VISION) then
+        nods_keypress_release() -- item_device
+
+        nv_state = item_device.nv_state
+        debug("nv_state = %s", nv_state)
+        if nv_state then
+            if ui_mcm[MARK_SWITCH_MODIFIER_MODE] then
+                mark_switch_release()
+            else
+                adjust_nods_brightness_key_release() --item_device
+            end
+        elseif is_weapon_zoomed() then
+            debug("bino nvg toggle")
+            bas_nvg_toggle() -- bas_nvg_scopes
+            mark_switch_release() -- mark_switch 
+        end
+    elseif (bind == key_bindings.kCUSTOM14) then
+        dosimeter_key_release() -- item_device
+        -- _item_device_key_release(key)
+    end
+end
+
+--[[
+    item_device.script:
+        -nods activate
+    bas_nvg_scopes.script:
+        - switching_sight (remove nvg)
+--]]
+function on_key_press(key)
+    debug("press event")
+    -- if (key == DIK_keys.DIK_N) then
+    -- end
+    _item_device_key_press(key)
+    _bas_nvg_scopes_key_press(key)
+end
+
+
+
+-- TODO: Check xp3eotec folding scope. Reticle missing?
+function on_zoom_in(obj)
+    if not (db.actor and db.actor:alive()) then return end
+
+    nv_state = item_device.nv_state
+    local bas_toggle = bas_nvg_scopes.toggle
+    debug("nv_state = %s", nv_state)
+    debug("bas_nvg = %s", bas_toggle)
+
+	local wpn = db.actor:active_item()
+    if not wpn then return end
+
+    local is_ms_nvg = is_mark_nvg(wpn) or false
+
+    if is_ms_nvg then 
+        deactivate_mark_nvg(wpn)
+    end
+
+
+    if nv_state and bas_toggle then
+        toggle_scope_nvg(false)
+    end
+end
+
+
+--#endregion
+
+function on_mcm_load()
+
+-- new template from Soulslike. Thanks Jabbers
+	local options = {
+		id = mod_id,
+		gr = {}
+	}
+
+	local scopes_and_nvg = {
+		id = "scopes_and_nvg",
+		text = ui_mcm_mod_id .. "scopes_and_nvg",
+		sh = true,
+		gr = {
+			{
+				id = "title",
+				type = "title",
+				-- text = "Binoculars and Scopes NVG Toggle Key",
+				text = "test_title",
+				size = { 512, 50 },
+				spacing = 20
+			},
+			{
+				id = "keybind",
+				type = "key_bind",
+				val = 2,
+				def = defaults.scope_bino_nvg_key.key
+			},
+			{
+				id = "mode",
+				type = ui_mcm.kb_mod_radio,
+				val = 2,
+				def = 0,
+				hint = "mcm_kb_mode",
+				content = {
+					{ 0, "mcm_kb_mode_press" },
+					{ 1, "mcm_kb_mode_dtap" },
+					{ 2, "mcm_kb_mode_hold" }
+				}
+			},
+			{
+				id = "modifier",
+				type = ui_mcm.kb_mod_radio,
+				val = 2,
+				def = 0,
+				hint = "mcm_kb_modifier",
+				content = {
+					{ 0, "mcm_kb_mod_none" },
+					{ 1, "mcm_kb_mod_shift" },
+					{ 2, "mcm_kb_mod_ctrl" },
+					{ 3, "mcm_kb_mod_alt" },
+				}
+			}
+		}
+	}
+
+	options.gr[#options.gr + 1] = scopes_and_nvg
+
+	return options
+end
+
+function on_option_change(mcm)
+    if (not mcm) then return end
+	ym_better_keys["scopes_and_nvg"] = get_scopes_and_nvg_key() or nil
+    other_mod_keys.z_mark_switch.mark_switch.key = z_mark_switch_mcm.get_config("keybind") or DIK_keys.DIK_EQUALS
+end
+
+--- Patches other scripts to unregister their key events
+function patches()
+
+    -- ----------- item_device.script ------------
+    if item_device then
+        UnregisterScriptCallback("on_key_hold", item_device.on_key_hold)
+        UnregisterScriptCallback("on_key_press", item_device.on_key_press)
+        UnregisterScriptCallback("on_key_release", item_device.on_key_release)
+    end
+
+    --  ---- bas_nvg_scopes.script ---------
+    if bas_nvg_scopes then
+        UnregisterScriptCallback("on_key_release", bas_nvg_scopes.on_key_release)
+        UnregisterScriptCallback("on_key_press", bas_nvg_scopes.switching_sight)
+    end
+
+
+    --  ---- z_mark_switch.script ---------
+    if z_mark_switch then
+
+        UnregisterScriptCallback("on_key_release", z_mark_switch.on_key_release)
+
+        -- override mark_switch mcm 
+        -- just show a message that explains where their mark switch key went
+        z_mark_switch.on_mcm_load = function()
+            op = {
+                id = "mark_switch",
+                sh = true,
+                gr = {
+                    { id = "title",   type = "slide",    link = "ui_options_slider_player", text = "ui_mcm_mark_switch_title", size = { 512, 50 }, spacing = 20 },
+                    {
+                        id = "desc",
+                        type = "desc",
+                        text = "Mark Switch key has been moved to your %c[255,0,255,0]Night Vision%c[255, 255,255 ,255] key.\nAdditionally, Alt + %c[255,0,255,0]Night Vision%c[255, 255,255 ,255] key works.",
+                        clr = {255, 255,255 ,255},
+                    }
+                }
+            }
+        end
+    end
+
+
+
+end
+
+
+
+function first_update()
+    -- turn off bino and scope nvg every load
+    -- stop blinding yourself during the day
+    toggle_scope_nvg(false)
+
+    -- patches other scripts
+    patches()
+end
+
+function on_game_start()
+
+    -- force load-order. doesnt seem to work
+    -- if z_mark_switch.on_game_start then end
+    -- if bas_nvg_scopes.on_game_start then end
+    -- if item_device then end
+
+    patches()
+
+    RegisterScriptCallback("actor_on_first_update", first_update)
+    RegisterScriptCallback("actor_on_weapon_zoom_in", on_zoom_in)
+    RegisterScriptCallback("on_option_change", on_option_change)
+	RegisterScriptCallback("on_key_hold", on_key_hold)
+	RegisterScriptCallback("on_key_press", on_key_press)
+	RegisterScriptCallback("on_key_release", on_key_release)
+
+    -- ----- mcm -------------
+    on_option_change(mcm_keybinds)
+end
