@@ -312,7 +312,7 @@ function is_bino_upgraded()
 end
 
 function is_weapon_zoomed()
-	local weapon_zoomed = axr_main.weapon_is_zoomed and (not (IsPistol(db.actor:active_item(),nil)) or db.actor:active_detector())
+	local weapon_zoomed = axr_main.weapon_is_zoomed and (not db.actor:active_detector())
     return weapon_zoomed or false
 end
 
@@ -390,6 +390,7 @@ end
 --#endregion ==============================================================
 
 --#region ====== bas_nvg_scopes.script ======
+
 --   -----   on_key_release functions-----
 function bas_nvg_toggle()
     local toggle_key = other_mod_keys.bas_nvg_scopes.nvg.key
@@ -409,6 +410,7 @@ end
 --#endregion ==============================================================
 
 --#region ======= z_mark_switch.script             =======================================================
+
 -----------     on_key_release -----------------------------
 
 
@@ -687,6 +689,9 @@ function on_option_change(mcm)
 end
 
 --- Patches other scripts to unregister their key events
+--- 
+--- Meant to be monkey-patched by subsequent module scripts
+--- i.e. z_ym_bettery_keybinds_mark_switch_mcm.script
 function patches()
 
 end
