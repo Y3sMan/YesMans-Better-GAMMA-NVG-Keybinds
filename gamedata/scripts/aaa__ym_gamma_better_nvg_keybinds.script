@@ -229,27 +229,30 @@ defaults = {
 	}
 
 }
-o
-
 --]]
--- Defaults
-defaults = {
-    ["scope_bino_nvg_key"] = {
-        ["key"] = DIK_keys.DIK_M,
-        ["mode"] = 0,
-        ["mod"] = 0
-    }
-}
-ym_better_keys = {
-    ["z_mark_switch"] = {
-        ["mark_switch"] = {
-            ["bind"] = key_bindings.kNIGHT_VISION,
-            ["mode"] = ui_mcm.MOD_ALT
-        }
-    }
-}
 
-MARK_SWITCH_MODIFIER_MODE = "MOD_ALT"
+--
+-- Defaults
+-- defaults = {
+--     ["scope_bino_nvg_key"] = {
+--         ["key"] = DIK_keys.DIK_M,
+--         ["mode"] = 0,
+--         ["mod"] = 0
+--     }
+-- }
+-- ym_better_keys = {
+--     ["z_mark_switch"] = {
+--         ["mark_switch"] = {
+--             ["bind"] = key_bindings.kNIGHT_VISION,
+--             ["mode"] = ui_mcm.MOD_ALT
+--         }
+--     }
+-- }
+
+--- Modifier key to control scope/mark switch while nods are active
+--- 
+--- Defaults to 3 (MOD_ALT)
+MARK_SWITCH_MODIFIER = 3 
 
 -- keys and binds other mods use
 -- take their keybinds and map them to whatever keybind we want
@@ -284,10 +287,6 @@ local key_to_key_mappings = {
     }
 }
 
-local mcm_keybinds = ui_mcm and ui_mcm.key_hold
--- mod id name 
-local mod_id = "ym_gamma_better_keybinds"
-local ui_mcm_mod_id = "ui_mcm_" .. mod_id .. "_"
 --#endregion
 
 --#region utilities
@@ -502,32 +501,26 @@ end
 
 --#region MCM Option Getters
 
-local function get_config(key, default_when_nil)
-    local opt = ui_mcm and ui_mcm.get(mod_id .. "/"..key)
-    if opt == nil then
-        opt = default_when_nil
-    end
-    return opt
-end
 
-function get_scopes_and_nvg_key()
-	--[[
-		returns a table containing:
-			keybind,
-			mode,
-			modifier (mod)
-	--]]
-	local key_info = {
-		["key"] = nil,
-		["mod"] = nil,
-		["mode"] = nil
-	}
-	key_info.key = get_config("scopes_and_nvg/keybind", defaults.scope_bino_nvg_key.key)
-	key_info.mode = get_config("scopes_and_nvg/mode", defaults.scope_bino_nvg_key.mode)
-	key_info.mod = get_config("scopes_and_nvg/modifier", defaults.scope_bino_nvg_key.mod)
 
-	return key_info
-end
+-- function get_scopes_and_nvg_key()
+-- 	--[[
+-- 		returns a table containing:
+-- 			keybind,
+-- 			mode,
+-- 			modifier (mod)
+-- 	--]]
+-- 	local key_info = {
+-- 		["key"] = nil,
+-- 		["mod"] = nil,
+-- 		["mode"] = nil
+-- 	}
+-- 	key_info.key = get_config("scopes_and_nvg/keybind", defaults.scope_bino_nvg_key.key)
+-- 	key_info.mode = get_config("scopes_and_nvg/mode", defaults.scope_bino_nvg_key.mode)
+-- 	key_info.mod = get_config("scopes_and_nvg/modifier", defaults.scope_bino_nvg_key.mod)
+
+-- 	return key_info
+-- end
 
 --#endregion
 
@@ -621,70 +614,15 @@ end
 
 --#endregion
 
-function on_mcm_load()
-
--- new template from Soulslike. Thanks Jabbers
-	local options = {
-		id = mod_id,
-		gr = {}
-	}
-
-	local scopes_and_nvg = {
-		id = "scopes_and_nvg",
-		text = ui_mcm_mod_id .. "scopes_and_nvg",
-		sh = true,
-		gr = {
-			{
-				id = "title",
-				type = "title",
-				-- text = "Binoculars and Scopes NVG Toggle Key",
-				text = "test_title",
-				size = { 512, 50 },
-				spacing = 20
-			},
-			{
-				id = "keybind",
-				type = "key_bind",
-				val = 2,
-				def = defaults.scope_bino_nvg_key.key
-			},
-			{
-				id = "mode",
-				type = ui_mcm.kb_mod_radio,
-				val = 2,
-				def = 0,
-				hint = "mcm_kb_mode",
-				content = {
-					{ 0, "mcm_kb_mode_press" },
-					{ 1, "mcm_kb_mode_dtap" },
-					{ 2, "mcm_kb_mode_hold" }
-				}
-			},
-			{
-				id = "modifier",
-				type = ui_mcm.kb_mod_radio,
-				val = 2,
-				def = 0,
-				hint = "mcm_kb_modifier",
-				content = {
-					{ 0, "mcm_kb_mod_none" },
-					{ 1, "mcm_kb_mod_shift" },
-					{ 2, "mcm_kb_mod_ctrl" },
-					{ 3, "mcm_kb_mod_alt" },
-				}
-			}
-		}
-	}
-
-	options.gr[#options.gr + 1] = scopes_and_nvg
-
-	return options
-end
 
 function on_option_change(mcm)
+    debug("on_option_change")
     if (not mcm) then return end
-	ym_better_keys["scopes_and_nvg"] = get_scopes_and_nvg_key() or nil
+
+    -- catch patched mods mcm option changes
+	-- ym_better_keys["scopes_and_nvg"] = get_scopes_and_nvg_key() or nil
     other_mod_keys.z_mark_switch.mark_switch.key = z_mark_switch_mcm.get_config("keybind") or DIK_keys.DIK_EQUALS
+
     -- our own option changes
     local s = ym_gamma_better_nvg_keybinds_mcm.get_settings()
     MARK_SWITCH_MODIFIER = s.nvg_modifier or MARK_SWITCH_MODIFIER
