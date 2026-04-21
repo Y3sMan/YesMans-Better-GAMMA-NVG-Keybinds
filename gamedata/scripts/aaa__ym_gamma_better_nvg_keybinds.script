@@ -2,13 +2,11 @@
     Mod Name: Better GAMMA NVG and MarkSwitch Keybinds (pending)
     Author:	YesMan
     Created:	27-03-2026 (dd-mm-yyyy)
-    Last Edit:	27-03-2026 (dd-mm-yyyy)
-    Version:	v1.0
 ]]
 
 --#region DEBUG ----------------------------------------
-local modname = "YM GAMMA Contextual Keys"
 local DEBUG = false
+local modname = "Better NVG Keybinds"
 
 local function print_table (tbl, indent)
     local g_type = type
@@ -201,6 +199,7 @@ end
 --#region MCM Defaults 
 
 
+local mcm_keybinds = ui_mcm and ui_mcm.key_hold and true or false
 
 -- imports
 local string_find = string.find
@@ -563,7 +562,7 @@ function on_key_release(key)
         nv_state = item_device.nv_state
         -- debug("nv_state = %s", nv_state)
         if nv_state then
-            if ui_mcm[MARK_SWITCH_MODIFIER_MODE] then
+            if ui_mcm.get_mod_key(MARK_SWITCH_MODIFIER) then
                 mark_switch_release()
             else
                 adjust_nods_brightness_key_release() --item_device
@@ -686,6 +685,9 @@ function on_option_change(mcm)
     if (not mcm) then return end
 	ym_better_keys["scopes_and_nvg"] = get_scopes_and_nvg_key() or nil
     other_mod_keys.z_mark_switch.mark_switch.key = z_mark_switch_mcm.get_config("keybind") or DIK_keys.DIK_EQUALS
+    -- our own option changes
+    local s = ym_gamma_better_nvg_keybinds_mcm.get_settings()
+    MARK_SWITCH_MODIFIER = s.nvg_modifier or MARK_SWITCH_MODIFIER
 end
 
 --- Patches other scripts to unregister their key events
